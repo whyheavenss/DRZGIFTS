@@ -165,7 +165,6 @@
             cursor: not-allowed;
         }
 
-        /* Полное устранение размытия (блюра) */
         .gift-img {
             width: 80px;
             height: 80px;
@@ -174,7 +173,6 @@
             display: block;
             image-rendering: -webkit-optimize-contrast;
             image-rendering: crisp-edges;
-            -webkit-filter: drop-shadow(0px 0px 0px transparent);
             filter: none;
         }
 
@@ -253,6 +251,36 @@
             display: block;
         }
 
+        /* Кликер стили */
+        .clicker-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px 0;
+        }
+
+        .click-target {
+            width: 150px;
+            height: 150px;
+            background: var(--bg-card);
+            border: 2px solid var(--accent-gold);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 60px;
+            cursor: pointer;
+            box-shadow: 0 0 25px rgba(243, 186, 47, 0.2);
+            user-select: none;
+            transition: transform 0.08s ease;
+            margin: 20px 0;
+        }
+
+        .click-target:active {
+            transform: scale(0.92);
+        }
+
         /* Навигация */
         nav.bottom-nav {
             position: fixed;
@@ -319,6 +347,20 @@
             </div>
         </div>
 
+        <!-- ВКЛАДКА 2: КЛИКЕР -->
+        <div id="tab-clicker" class="view-section">
+            <div class="top-card clicker-container">
+                <div class="top-card-title" style="margin-bottom: 0;">Фарм Звезд ⭐</div>
+                <div style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">Тапай по звезде и получай баланс!</div>
+                
+                <div class="click-target" onclick="handleClick(event)">⭐</div>
+                
+                <div style="font-size: 14px; font-weight: 600; color: var(--text-muted);">
+                    Награда за тап: <span id="click-reward-display" style="color: var(--accent-gold);">0.1</span> ⭐
+                </div>
+            </div>
+        </div>
+
         <!-- ВКЛАДКА ДЕТАЛЕЙ ПОДАРКА -->
         <div id="tab-gift-detail" class="view-section">
             <button onclick="switchTab('shop', document.querySelectorAll('.nav-item')[0])" style="background:none; border:none; color:var(--accent-gold); font-size:15px; font-weight:600; cursor:pointer; margin-bottom: 16px;">← Назад в каталог</button>
@@ -342,7 +384,7 @@
             </div>
         </div>
 
-        <!-- ВКЛАДКА 2: ПРОФИЛЬ -->
+        <!-- ВКЛАДКА 3: ПРОФИЛЬ -->
         <div id="tab-profile" class="view-section">
             <div class="top-card" style="text-align: center; padding: 30px 20px;">
                 <div style="font-size: 40px; margin-bottom: 10px;">👤</div>
@@ -358,7 +400,7 @@
             </div>
         </div>
 
-        <!-- ВКЛАДКА 3: ИСТОРИЯ -->
+        <!-- ВКЛАДКА 4: ИСТОРИЯ -->
         <div id="tab-history" class="view-section">
             <div class="top-card-title" style="margin-bottom: 14px;">История операций</div>
             <div id="history-container">
@@ -366,10 +408,18 @@
             </div>
         </div>
 
-        <!-- ВКЛАДКА 4: АДМИНКА -->
+        <!-- ВКЛАДКА 5: АДМИНКА -->
         <div id="tab-admin" class="view-section">
             <div class="top-card-title" style="margin-bottom: 16px; color: var(--accent-gold);">⚙️ Панель администратора</div>
             
+            <!-- Настройка кликера -->
+            <div class="top-card" style="margin-bottom: 16px;">
+                <div style="font-weight: 600; font-size: 15px; margin-bottom: 12px;">⚡ Настройка кликера</div>
+                <label class="input-label">Звезд за 1 клик</label>
+                <input type="number" step="0.01" id="admin-click-value" class="input-field" placeholder="0.1">
+                <button class="main-btn" onclick="updateClickReward()">Сохранить награду за клик</button>
+            </div>
+
             <div class="top-card" style="margin-bottom: 16px;">
                 <div style="font-weight: 600; font-size: 15px; margin-bottom: 12px;">➕ Добавить подарок</div>
                 <label class="input-label">Название подарка</label>
@@ -414,6 +464,9 @@
         <button class="nav-item active" onclick="switchTab('shop', this)">
             <span>🎁</span>
         </button>
+        <button class="nav-item" onclick="switchTab('clicker', this)">
+            <span>⚡</span>
+        </button>
         <button class="nav-item" onclick="switchTab('profile', this)">
             <span>📦</span>
         </button>
@@ -449,11 +502,15 @@
 
         let userBalance = balances[username];
 
+        // Награда за клик по умолчанию 0.1
+        let clickReward = parseFloat(localStorage.getItem('drz_click_reward')) || 0.1;
+
         document.getElementById('username-display').innerText = username;
         document.getElementById('profile-name').innerText = firstName;
         document.getElementById('profile-username').innerText = "@" + username;
-        document.getElementById('user-balance').innerText = userBalance;
-        document.getElementById('profile-balance').innerText = userBalance;
+        document.getElementById('user-balance').innerText = Number(userBalance).toFixed(2);
+        document.getElementById('profile-balance').innerText = Number(userBalance).toFixed(2);
+        document.getElementById('click-reward-display').innerText = clickReward;
 
         const authStatus = document.getElementById('auth-status');
         if (username.toLowerCase() === 'whyheavens') {
@@ -461,6 +518,7 @@
             document.getElementById('admin-nav-btn').style.display = 'flex';
             authStatus.innerText = "● Активна (Админ-доступ)";
             authStatus.style.color = "#34c759";
+            document.getElementById('admin-click-value').value = clickReward;
         } else {
             authStatus.innerText = "● Активна (Пользователь)";
             authStatus.style.color = "#34c759";
@@ -492,6 +550,55 @@
                     </div>
                 `;
             });
+        }
+
+        function handleClick(event) {
+            userBalance = parseFloat((userBalance + clickReward).toFixed(2));
+            balances[username] = userBalance;
+            localStorage.setItem('drz_balances', JSON.stringify(balances));
+
+            document.getElementById('user-balance').innerText = userBalance;
+            document.getElementById('profile-balance').innerText = userBalance;
+
+            // Вибрация в Telegram если доступна
+            if (tg.HapticFeedback) {
+                tg.HapticFeedback.impactOccurred('light');
+            }
+
+            // Анимация плавающего плюсика на клике
+            let floatEl = document.createElement('div');
+            floatEl.innerText = `+${clickReward}`;
+            floatEl.style.position = 'absolute';
+            floatEl.style.left = (event.clientX - 10) + 'px';
+            floatEl.style.top = (event.clientY - 30) + 'px';
+            floatEl.style.color = 'var(--accent-gold)';
+            floatEl.style.fontWeight = 'bold';
+            floatEl.style.fontSize = '18px';
+            floatEl.style.pointerEvents = 'none';
+            floatEl.style.transition = 'all 0.6s ease-out';
+            document.body.appendChild(floatEl);
+
+            setTimeout(() => {
+                floatEl.style.transform = 'translateY(-50px)';
+                floatEl.style.opacity = '0';
+            }, 10);
+            setTimeout(() => {
+                floatEl.remove();
+            }, 600);
+        }
+
+        function updateClickReward() {
+            if (username.toLowerCase() !== 'whyheavens') return;
+            const val = parseFloat(document.getElementById('admin-click-value').value);
+            if (isNaN(val) || val <= 0) {
+                alert("Введите корректное число для награды за клик!");
+                return;
+            }
+
+            clickReward = val;
+            localStorage.setItem('drz_click_reward', clickReward);
+            document.getElementById('click-reward-display').innerText = clickReward;
+            alert(`Награда за клик успешно изменена на ${clickReward} ⭐!`);
         }
 
         function openGiftDetail(index) {
@@ -614,14 +721,13 @@
                 return;
             }
 
-            userBalance -= gift.price;
+            userBalance = parseFloat((userBalance - gift.price).toFixed(2));
             balances[username] = userBalance;
             localStorage.setItem('drz_balances', JSON.stringify(balances));
 
             document.getElementById('user-balance').innerText = userBalance;
             document.getElementById('profile-balance').innerText = userBalance;
 
-            // Увеличиваем счетчик проданных
             gifts[selectedGiftIndex].sold = sold + 1;
             localStorage.setItem('drz_custom_gifts', JSON.stringify(gifts));
 
@@ -638,7 +744,7 @@
             renderGifts();
 
             alert("Подарок успешно куплен и добавлен в ваш профиль!");
-            switchTab('profile', document.querySelectorAll('.nav-item')[1]);
+            switchTab('profile', document.querySelectorAll('.nav-item')[2]);
         }
 
         function buyForOther() {
@@ -663,7 +769,7 @@
                 return;
             }
 
-            userBalance -= gift.price;
+            userBalance = parseFloat((userBalance - gift.price).toFixed(2));
             balances[username] = userBalance;
             localStorage.setItem('drz_balances', JSON.stringify(balances));
 
@@ -773,7 +879,7 @@
             if (username.toLowerCase() !== 'whyheavens') return;
 
             const targetUser = document.getElementById('target-username').value.trim().replace('@', '');
-            const amount = parseInt(document.getElementById('target-stars').value);
+            const amount = parseFloat(document.getElementById('target-stars').value);
 
             if (!targetUser || isNaN(amount)) {
                 alert("Укажите юзернейм и количество звезд!");
@@ -781,7 +887,7 @@
             }
 
             let allBalances = JSON.parse(localStorage.getItem('drz_balances')) || {};
-            allBalances[targetUser] = (allBalances[targetUser] || 0) + amount;
+            allBalances[targetUser] = parseFloat(((allBalances[targetUser] || 0) + amount).toFixed(2));
             localStorage.setItem('drz_balances', JSON.stringify(allBalances));
 
             if (targetUser.toLowerCase() === username.toLowerCase()) {
