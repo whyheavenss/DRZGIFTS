@@ -79,7 +79,7 @@
             color: var(--text-muted);
             font-size: 18px;
             cursor: pointer;
-            display: none; /* Покажется только у whyheavens */
+            display: none;
             margin-left: 10px;
         }
 
@@ -155,14 +155,20 @@
             text-align: center;
             position: relative;
             cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
 
+        /* Четкая картинка без блюра */
         .gift-img {
-            width: 74px;
-            height: 74px;
+            width: 80px;
+            height: 80px;
             object-fit: contain;
             margin: 8px auto 12px;
             display: block;
+            image-rendering: -webkit-optimize-contrast;
+            filter: none !important;
         }
 
         .gift-name {
@@ -172,6 +178,7 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            width: 100%;
         }
 
         .gift-price-badge {
@@ -277,7 +284,7 @@
 
     <div class="container">
         
-        <!-- ВКЛАДКА 1: КАТАЛОГ ПОДАРКОВ -->
+        <!-- ВКЛАДКА 1: КАТАЛОГ -->
         <div id="tab-shop" class="view-section active">
             <div class="top-card">
                 <div class="top-card-title">DRZ Gifts Hub</div>
@@ -292,6 +299,26 @@
             <div class="section-title">Доступные подарки</div>
             <div class="gifts-grid" id="gifts-container">
                 <div class="empty-text">Подарков пока нет.<br>Дождитесь добавления от администратора.</div>
+            </div>
+        </div>
+
+        <!-- ВКЛАДКА ДЕТАЛЕЙ ПОДАРКА (ПОКУПКА) -->
+        <div id="tab-gift-detail" class="view-section">
+            <button onclick="switchTab('shop', document.querySelectorAll('.nav-item')[0])" style="background:none; border:none; color:var(--accent-gold); font-size:15px; font-weight:600; cursor:pointer; margin-bottom: 16px;">← Назад в каталог</button>
+            <div class="top-card" style="text-align: center;">
+                <img id="detail-img" class="gift-img" style="width: 120px; height: 120px; margin: 0 auto 16px;" src="" alt="">
+                <div id="detail-name" style="font-size: 20px; font-weight: 700; margin-bottom: 8px;">Название</div>
+                <div id="detail-price" class="gift-price-badge" style="font-size: 15px; margin-bottom: 20px;">⭐ 0</div>
+
+                <!-- Купить себе -->
+                <button class="main-btn" onclick="buyForSelf()">Купить себе</button>
+
+                <div style="margin: 20px 0 10px; border-top: 1px solid var(--border-color); padding-top: 15px; text-align: left;">
+                    <div style="font-size: 13px; font-weight: 600; margin-bottom: 8px; color: var(--text-muted);">Или отправить другому:</div>
+                    <label class="input-label">Юзернейм получателя (без @)</label>
+                    <input type="text" id="recipient-username" class="input-field" placeholder="username">
+                    <button class="main-btn" style="background: var(--bg-main); border: 1px solid var(--accent-gold); color: var(--accent-gold);" onclick="buyForOther()">Купить в подарок другу</button>
+                </div>
             </div>
         </div>
 
@@ -319,7 +346,7 @@
             </div>
         </div>
 
-        <!-- ВКЛАДКА 4: АДМИН-ПАНЕЛЬ (Только для whyheavens) -->
+        <!-- ВКЛАДКА 4: АДМИНКА -->
         <div id="tab-admin" class="view-section">
             <div class="top-card-title" style="margin-bottom: 16px; color: var(--accent-gold);">⚙️ Панель администратора</div>
             
@@ -351,7 +378,7 @@
 
     </div>
 
-    <!-- Нижняя панель навигации -->
+    <!-- Нижняя навигация -->
     <nav class="bottom-nav">
         <button class="nav-item active" onclick="switchTab('shop', this)">
             <span>🎁</span>
@@ -372,7 +399,6 @@
         tg.expand();
 
         const tgUser = tg.initDataUnsafe?.user;
-        
         let username = "guest";
         let firstName = "Гость";
 
@@ -398,7 +424,6 @@
         document.getElementById('user-balance').innerText = userBalance;
         document.getElementById('profile-balance').innerText = userBalance;
 
-        // ПРОВЕРКА АДМИНА
         const authStatus = document.getElementById('auth-status');
         if (username.toLowerCase() === 'whyheavens') {
             document.getElementById('admin-gear').style.display = 'block';
@@ -412,6 +437,7 @@
 
         let gifts = JSON.parse(localStorage.getItem('drz_custom_gifts')) || [];
         let historyLog = JSON.parse(localStorage.getItem('drz_history')) || [];
+        let selectedGiftIndex = null;
 
         function renderGifts() {
             const container = document.getElementById('gifts-container');
@@ -423,13 +449,23 @@
             container.innerHTML = '';
             gifts.forEach((gift, index) => {
                 container.innerHTML += `
-                    <div class="gift-card" onclick="buyGift(${index})">
+                    <div class="gift-card" onclick="openGiftDetail(${index})">
                         <img class="gift-img" src="${gift.img}" alt="">
                         <div class="gift-name">${gift.name}</div>
                         <div class="gift-price-badge">⭐ ${gift.price}</div>
                     </div>
                 `;
             });
+        }
+
+        function openGiftDetail(index) {
+            selectedGiftIndex = index;
+            const gift = gifts[index];
+            document.getElementById('detail-img').src = gift.img;
+            document.getElementById('detail-name').innerText = gift.name;
+            document.getElementById('detail-price').innerText = "⭐ " + gift.price;
+            document.getElementById('recipient-username').value = '';
+            switchTab('gift-detail', null);
         }
 
         function renderProfileGifts() {
@@ -442,15 +478,41 @@
             }
 
             profileContainer.innerHTML = '';
-            myGifts.forEach(g => {
+            myGifts.forEach((g, gIndex) => {
                 profileContainer.innerHTML += `
-                    <div class="gift-card">
-                        <img class="gift-img" src="${g.img}" alt="">
-                        <div class="gift-name">${g.name}</div>
-                        <div class="gift-price-badge" style="background: rgba(52, 199, 89, 0.1); color: #34c759;">⭐ ${g.price}</div>
+                    <div class="gift-card" style="justify-content: space-between;">
+                        <div>
+                            <img class="gift-img" src="${g.img}" alt="">
+                            <div class="gift-name">${g.name}</div>
+                        </div>
+                        <button class="main-btn" style="padding: 6px; font-size: 11px; margin-top: 8px; background: var(--border-color); color: var(--text-main);" onclick="transferGift(${gIndex})">Передать</button>
                     </div>
                 `;
             });
+        }
+
+        function transferGift(giftIndex) {
+            let recipient = prompt("Введите юзернейм пользователя, кому хотите передать подарок (без @):");
+            if (!recipient) return;
+            recipient = recipient.trim().replace('@', '');
+
+            let myGifts = JSON.parse(localStorage.getItem('drz_my_gifts_' + username)) || [];
+            let giftToTransfer = myGifts.splice(giftIndex, 1)[0];
+            localStorage.setItem('drz_my_gifts_' + username, JSON.stringify(myGifts));
+
+            let recipientGifts = JSON.parse(localStorage.getItem('drz_my_gifts_' + recipient)) || [];
+            recipientGifts.push(giftToTransfer);
+            localStorage.setItem('drz_my_gifts_' + recipient, JSON.stringify(recipientGifts));
+
+            historyLog.unshift({
+                text: `@${username} передал подарок ${giftToTransfer.name} пользователю @${recipient}`,
+                date: new Date().toLocaleTimeString()
+            });
+            localStorage.setItem('drz_history', JSON.stringify(historyLog));
+            renderHistory();
+            renderProfileGifts();
+
+            alert(`Подарок успешно передан пользователю @${recipient}!`);
         }
 
         function renderHistory() {
@@ -484,6 +546,71 @@
             }
         }
 
+        function buyForSelf() {
+            const gift = gifts[selectedGiftIndex];
+            if (userBalance < gift.price) {
+                alert("Недостаточно звезд на балансе!");
+                return;
+            }
+
+            userBalance -= gift.price;
+            balances[username] = userBalance;
+            localStorage.setItem('drz_balances', JSON.stringify(balances));
+
+            document.getElementById('user-balance').innerText = userBalance;
+            document.getElementById('profile-balance').innerText = userBalance;
+
+            let myGifts = JSON.parse(localStorage.getItem('drz_my_gifts_' + username)) || [];
+            myGifts.push(gift);
+            localStorage.setItem('drz_my_gifts_' + username, JSON.stringify(myGifts));
+
+            historyLog.unshift({
+                text: `@${username} купил себе ${gift.name} за ${gift.price} ⭐`,
+                date: new Date().toLocaleTimeString()
+            });
+            localStorage.setItem('drz_history', JSON.stringify(historyLog));
+            renderHistory();
+
+            alert("Подарок успешно куплен и добавлен в ваш профиль!");
+            switchTab('profile', document.querySelectorAll('.nav-item')[1]);
+        }
+
+        function buyForOther() {
+            const gift = gifts[selectedGiftIndex];
+            let recipient = document.getElementById('recipient-username').value.trim().replace('@', '');
+
+            if (!recipient) {
+                alert("Введите юзернейм получателя!");
+                return;
+            }
+
+            if (userBalance < gift.price) {
+                alert("Недостаточно звезд на балансе!");
+                return;
+            }
+
+            userBalance -= gift.price;
+            balances[username] = userBalance;
+            localStorage.setItem('drz_balances', JSON.stringify(balances));
+
+            document.getElementById('user-balance').innerText = userBalance;
+            document.getElementById('profile-balance').innerText = userBalance;
+
+            let recipientGifts = JSON.parse(localStorage.getItem('drz_my_gifts_' + recipient)) || [];
+            recipientGifts.push(gift);
+            localStorage.setItem('drz_my_gifts_' + recipient, JSON.stringify(recipientGifts));
+
+            historyLog.unshift({
+                text: `@${username} купил в подарок ${gift.name} пользователю @${recipient} за ${gift.price} ⭐`,
+                date: new Date().toLocaleTimeString()
+            });
+            localStorage.setItem('drz_history', JSON.stringify(historyLog));
+            renderHistory();
+
+            alert(`Подарок успешно отправлен пользователю @${recipient}!`);
+            switchTab('shop', document.querySelectorAll('.nav-item')[0]);
+        }
+
         function addNewGift() {
             if (username.toLowerCase() !== 'whyheavens') return;
 
@@ -514,8 +641,6 @@
 
             alert("Подарок успешно добавлен!");
             switchTab('shop', document.querySelectorAll('.nav-item')[0]);
-
-            if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
         }
 
         function grantStars() {
@@ -550,37 +675,6 @@
             document.getElementById('target-username').value = '';
             document.getElementById('target-stars').value = '';
             switchTab('shop', document.querySelectorAll('.nav-item')[0]);
-        }
-
-        function buyGift(index) {
-            const gift = gifts[index];
-            if(userBalance < gift.price) {
-                alert("Недостаточно звезд на балансе!");
-                return;
-            }
-
-            if(confirm(`Купить подарок "${gift.name}" за ${gift.price} ⭐?`)) {
-                userBalance -= gift.price;
-                balances[username] = userBalance;
-                localStorage.setItem('drz_balances', JSON.stringify(balances));
-
-                document.getElementById('user-balance').innerText = userBalance;
-                document.getElementById('profile-balance').innerText = userBalance;
-
-                let myGifts = JSON.parse(localStorage.getItem('drz_my_gifts_' + username)) || [];
-                myGifts.push(gift);
-                localStorage.setItem('drz_my_gifts_' + username, JSON.stringify(myGifts));
-
-                historyLog.unshift({
-                    text: `@${username} купил подарок ${gift.name} за ${gift.price} ⭐`,
-                    date: new Date().toLocaleTimeString()
-                });
-                localStorage.setItem('drz_history', JSON.stringify(historyLog));
-                renderHistory();
-
-                alert("Подарок успешно куплен!");
-                switchTab('profile', document.querySelectorAll('.nav-item')[1]);
-            }
         }
 
         renderGifts();
