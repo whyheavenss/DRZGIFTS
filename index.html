@@ -160,7 +160,12 @@
             align-items: center;
         }
 
-        /* Четкая картинка без блюра */
+        .gift-card.sold-out {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        /* Полное устранение размытия (блюра) */
         .gift-img {
             width: 80px;
             height: 80px;
@@ -168,7 +173,9 @@
             margin: 8px auto 12px;
             display: block;
             image-rendering: -webkit-optimize-contrast;
-            filter: none !important;
+            image-rendering: crisp-edges;
+            -webkit-filter: drop-shadow(0px 0px 0px transparent);
+            filter: none;
         }
 
         .gift-name {
@@ -189,6 +196,16 @@
             border-radius: 8px;
             font-size: 12px;
             font-weight: 700;
+        }
+
+        .sold-out-badge {
+            background: rgba(255, 69, 58, 0.1);
+            color: var(--danger);
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 700;
+            margin-top: 6px;
         }
 
         .empty-text {
@@ -302,23 +319,26 @@
             </div>
         </div>
 
-        <!-- ВКЛАДКА ДЕТАЛЕЙ ПОДАРКА (ПОКУПКА) -->
+        <!-- ВКЛАДКА ДЕТАЛЕЙ ПОДАРКА -->
         <div id="tab-gift-detail" class="view-section">
             <button onclick="switchTab('shop', document.querySelectorAll('.nav-item')[0])" style="background:none; border:none; color:var(--accent-gold); font-size:15px; font-weight:600; cursor:pointer; margin-bottom: 16px;">← Назад в каталог</button>
             <div class="top-card" style="text-align: center;">
                 <img id="detail-img" class="gift-img" style="width: 120px; height: 120px; margin: 0 auto 16px;" src="" alt="">
                 <div id="detail-name" style="font-size: 20px; font-weight: 700; margin-bottom: 8px;">Название</div>
-                <div id="detail-price" class="gift-price-badge" style="font-size: 15px; margin-bottom: 20px;">⭐ 0</div>
+                <div id="detail-price" class="gift-price-badge" style="font-size: 15px; margin-bottom: 8px;">⭐ 0</div>
+                <div id="detail-stock" style="font-size: 12px; color: var(--text-muted); margin-bottom: 20px;">Остаток: 0 шт.</div>
 
-                <!-- Купить себе -->
-                <button class="main-btn" onclick="buyForSelf()">Купить себе</button>
+                <div id="purchase-controls">
+                    <button class="main-btn" onclick="buyForSelf()">Купить себе</button>
 
-                <div style="margin: 20px 0 10px; border-top: 1px solid var(--border-color); padding-top: 15px; text-align: left;">
-                    <div style="font-size: 13px; font-weight: 600; margin-bottom: 8px; color: var(--text-muted);">Или отправить другому:</div>
-                    <label class="input-label">Юзернейм получателя (без @)</label>
-                    <input type="text" id="recipient-username" class="input-field" placeholder="username">
-                    <button class="main-btn" style="background: var(--bg-main); border: 1px solid var(--accent-gold); color: var(--accent-gold);" onclick="buyForOther()">Купить в подарок другу</button>
+                    <div style="margin: 20px 0 10px; border-top: 1px solid var(--border-color); padding-top: 15px; text-align: left;">
+                        <div style="font-size: 13px; font-weight: 600; margin-bottom: 8px; color: var(--text-muted);">Или отправить другому:</div>
+                        <label class="input-label">Юзернейм получателя (без @)</label>
+                        <input type="text" id="recipient-username" class="input-field" placeholder="username">
+                        <button class="main-btn" style="background: var(--bg-main); border: 1px solid var(--accent-gold); color: var(--accent-gold);" onclick="buyForOther()">Купить в подарок другу</button>
+                    </div>
                 </div>
+                <div id="sold-out-msg" style="display: none; color: var(--danger); font-weight: 700; font-size: 16px; margin-top: 10px;">Этот подарок полностью раскуплен!</div>
             </div>
         </div>
 
@@ -361,7 +381,18 @@
                 <label class="input-label">Стоимость (в звездах ⭐)</label>
                 <input type="number" id="gift-price" class="input-field" placeholder="500">
 
+                <label class="input-label">Количество штук (тираж)</label>
+                <input type="number" id="gift-total" class="input-field" placeholder="10">
+
                 <button class="main-btn" onclick="addNewGift()">Опубликовать подарок</button>
+            </div>
+
+            <!-- Управление / удаление подарков -->
+            <div class="top-card" style="margin-bottom: 16px;">
+                <div style="font-weight: 600; font-size: 15px; margin-bottom: 12px;">🗑 Управление каталогом подарков</div>
+                <div id="admin-gifts-list">
+                    <div class="empty-text">Нет подарков для управления.</div>
+                </div>
             </div>
 
             <div class="top-card">
@@ -389,7 +420,7 @@
         <button class="nav-item" onclick="switchTab('history', this)">
             <span>📊</span>
         </button>
-        <button id="admin-nav-btn" class="nav-item" style="display: none;" onclick="switchTab('admin', this)">
+        <button id="admin-nav-btn" class="nav-item" style="display: none;" onclick="switchTab('admin', this); renderAdminGiftsList();">
             <span>⚙️</span>
         </button>
     </nav>
@@ -448,11 +479,16 @@
 
             container.innerHTML = '';
             gifts.forEach((gift, index) => {
+                let sold = (gift.sold || 0);
+                let total = (gift.total !== undefined ? gift.total : 9999);
+                let isSoldOut = sold >= total;
+
                 container.innerHTML += `
-                    <div class="gift-card" onclick="openGiftDetail(${index})">
+                    <div class="gift-card ${isSoldOut ? 'sold-out' : ''}" onclick="openGiftDetail(${index})">
                         <img class="gift-img" src="${gift.img}" alt="">
                         <div class="gift-name">${gift.name}</div>
                         <div class="gift-price-badge">⭐ ${gift.price}</div>
+                        ${isSoldOut ? '<div class="sold-out-badge">РАСКУПЛЕНО</div>' : `<div style="font-size:11px; color:var(--text-muted); margin-top:4px;">Осталось: ${total - sold} из ${total}</div>`}
                     </div>
                 `;
             });
@@ -461,10 +497,24 @@
         function openGiftDetail(index) {
             selectedGiftIndex = index;
             const gift = gifts[index];
+            let sold = (gift.sold || 0);
+            let total = (gift.total !== undefined ? gift.total : 9999);
+            let isSoldOut = sold >= total;
+
             document.getElementById('detail-img').src = gift.img;
             document.getElementById('detail-name').innerText = gift.name;
             document.getElementById('detail-price').innerText = "⭐ " + gift.price;
+            document.getElementById('detail-stock').innerText = `Остаток: ${total - sold} из ${total} шт.`;
             document.getElementById('recipient-username').value = '';
+
+            if (isSoldOut) {
+                document.getElementById('purchase-controls').style.display = 'none';
+                document.getElementById('sold-out-msg').style.display = 'block';
+            } else {
+                document.getElementById('purchase-controls').style.display = 'block';
+                document.getElementById('sold-out-msg').style.display = 'none';
+            }
+
             switchTab('gift-detail', null);
         }
 
@@ -544,10 +594,21 @@
             if(tabName === 'profile') {
                 renderProfileGifts();
             }
+            if(tabName === 'admin') {
+                renderAdminGiftsList();
+            }
         }
 
         function buyForSelf() {
             const gift = gifts[selectedGiftIndex];
+            let sold = (gift.sold || 0);
+            let total = (gift.total !== undefined ? gift.total : 9999);
+
+            if (sold >= total) {
+                alert("Этот подарок уже полностью раскуплен!");
+                return;
+            }
+
             if (userBalance < gift.price) {
                 alert("Недостаточно звезд на балансе!");
                 return;
@@ -560,8 +621,12 @@
             document.getElementById('user-balance').innerText = userBalance;
             document.getElementById('profile-balance').innerText = userBalance;
 
+            // Увеличиваем счетчик проданных
+            gifts[selectedGiftIndex].sold = sold + 1;
+            localStorage.setItem('drz_custom_gifts', JSON.stringify(gifts));
+
             let myGifts = JSON.parse(localStorage.getItem('drz_my_gifts_' + username)) || [];
-            myGifts.push(gift);
+            myGifts.push({ name: gift.name, img: gift.img, price: gift.price });
             localStorage.setItem('drz_my_gifts_' + username, JSON.stringify(myGifts));
 
             historyLog.unshift({
@@ -570,6 +635,7 @@
             });
             localStorage.setItem('drz_history', JSON.stringify(historyLog));
             renderHistory();
+            renderGifts();
 
             alert("Подарок успешно куплен и добавлен в ваш профиль!");
             switchTab('profile', document.querySelectorAll('.nav-item')[1]);
@@ -577,6 +643,14 @@
 
         function buyForOther() {
             const gift = gifts[selectedGiftIndex];
+            let sold = (gift.sold || 0);
+            let total = (gift.total !== undefined ? gift.total : 9999);
+
+            if (sold >= total) {
+                alert("Этот подарок уже полностью раскуплен!");
+                return;
+            }
+
             let recipient = document.getElementById('recipient-username').value.trim().replace('@', '');
 
             if (!recipient) {
@@ -596,8 +670,11 @@
             document.getElementById('user-balance').innerText = userBalance;
             document.getElementById('profile-balance').innerText = userBalance;
 
+            gifts[selectedGiftIndex].sold = sold + 1;
+            localStorage.setItem('drz_custom_gifts', JSON.stringify(gifts));
+
             let recipientGifts = JSON.parse(localStorage.getItem('drz_my_gifts_' + recipient)) || [];
-            recipientGifts.push(gift);
+            recipientGifts.push({ name: gift.name, img: gift.img, price: gift.price });
             localStorage.setItem('drz_my_gifts_' + recipient, JSON.stringify(recipientGifts));
 
             historyLog.unshift({
@@ -606,6 +683,7 @@
             });
             localStorage.setItem('drz_history', JSON.stringify(historyLog));
             renderHistory();
+            renderGifts();
 
             alert(`Подарок успешно отправлен пользователю @${recipient}!`);
             switchTab('shop', document.querySelectorAll('.nav-item')[0]);
@@ -617,17 +695,18 @@
             const name = document.getElementById('gift-name').value.trim();
             const img = document.getElementById('gift-img').value.trim();
             const price = parseInt(document.getElementById('gift-price').value);
+            const total = parseInt(document.getElementById('gift-total').value);
 
-            if (!name || !img || isNaN(price)) {
-                alert("Заполните корректно все поля подарка!");
+            if (!name || !img || isNaN(price) || isNaN(total)) {
+                alert("Заполните корректно все поля подарка включая тираж!");
                 return;
             }
 
-            gifts.push({ name, img, price });
+            gifts.push({ name, img, price, total, sold: 0 });
             localStorage.setItem('drz_custom_gifts', JSON.stringify(gifts));
 
             historyLog.unshift({
-                text: `Админ добавил подарок: ${name} (${price} ⭐)`,
+                text: `Админ добавил подарок: ${name} (${price} ⭐, тираж: ${total} шт.)`,
                 date: new Date().toLocaleTimeString()
             });
             localStorage.setItem('drz_history', JSON.stringify(historyLog));
@@ -638,9 +717,56 @@
             document.getElementById('gift-name').value = '';
             document.getElementById('gift-img').value = '';
             document.getElementById('gift-price').value = '';
+            document.getElementById('gift-total').value = '';
 
             alert("Подарок успешно добавлен!");
             switchTab('shop', document.querySelectorAll('.nav-item')[0]);
+        }
+
+        function renderAdminGiftsList() {
+            const listContainer = document.getElementById('admin-gifts-list');
+            if (gifts.length === 0) {
+                listContainer.innerHTML = `<div class="empty-text">Нет созданных подарков.</div>`;
+                return;
+            }
+
+            listContainer.innerHTML = '';
+            gifts.forEach((gift, index) => {
+                let sold = gift.sold || 0;
+                let total = gift.total !== undefined ? gift.total : 9999;
+                listContainer.innerHTML += `
+                    <div style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-main); border: 1px solid var(--border-color); padding: 10px; border-radius: 12px; margin-bottom: 8px;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <img src="${gift.img}" style="width: 36px; height: 36px; object-fit: contain;" alt="">
+                            <div>
+                                <div style="font-size: 13px; font-weight: 600;">${gift.name}</div>
+                                <div style="font-size: 11px; color: var(--text-muted);">Цена: ${gift.price}⭐ | Продано: ${sold}/${total}</div>
+                            </div>
+                        </div>
+                        <button onclick="deleteGift(${index})" style="background: rgba(255, 69, 58, 0.1); color: var(--danger); border: none; padding: 6px 10px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer;">Удалить</button>
+                    </div>
+                `;
+            });
+        }
+
+        function deleteGift(index) {
+            if (username.toLowerCase() !== 'whyheavens') return;
+            if (!confirm(`Удалить подарок "${gifts[index].name}" из каталога?`)) return;
+
+            let deletedName = gifts[index].name;
+            gifts.splice(index, 1);
+            localStorage.setItem('drz_custom_gifts', JSON.stringify(gifts));
+
+            historyLog.unshift({
+                text: `Админ удалил подарок: ${deletedName}`,
+                date: new Date().toLocaleTimeString()
+            });
+            localStorage.setItem('drz_history', JSON.stringify(historyLog));
+
+            renderGifts();
+            renderAdminGiftsList();
+            renderHistory();
+            alert("Подарок удален!");
         }
 
         function grantStars() {
