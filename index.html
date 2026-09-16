@@ -31,7 +31,6 @@
             padding-bottom: 90px;
         }
 
-        /* Шапка приложения в точности как на скрине */
         header {
             display: flex;
             justify-content: space-between;
@@ -80,16 +79,22 @@
             color: var(--text-muted);
             font-size: 18px;
             cursor: pointer;
-            display: none; /* Показывать только для whyheavens */
+            display: none; /* Покажется только если username === whyheavens */
             margin-left: 10px;
         }
 
-        /* Основной контейнер */
         .container {
             padding: 16px 20px;
         }
 
-        /* Карточка-модуль сверху (как "Top up your balance") */
+        .view-section {
+            display: none;
+        }
+
+        .view-section.active {
+            display: block;
+        }
+
         .top-card {
             background: var(--bg-card);
             border: 1px solid var(--border-color);
@@ -121,8 +126,6 @@
             font-weight: 600;
             color: var(--text-muted);
             border-radius: 10px;
-            cursor: pointer;
-            transition: 0.2s;
         }
 
         .toggle-btn.active {
@@ -131,7 +134,6 @@
             border: 1px solid var(--border-color);
         }
 
-        /* Сетка подарков */
         .section-title {
             font-size: 15px;
             font-weight: 600;
@@ -190,7 +192,6 @@
             grid-column: span 2;
         }
 
-        /* Кнопки */
         .main-btn {
             width: 100%;
             padding: 14px;
@@ -204,7 +205,6 @@
             text-align: center;
         }
 
-        /* Модальные окна */
         .modal {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -266,7 +266,7 @@
             display: block;
         }
 
-        /* Нижняя навигация как на скрине */
+        /* Навигация */
         nav.bottom-nav {
             position: fixed;
             bottom: 0; left: 0; width: 100%;
@@ -289,6 +289,7 @@
             flex-direction: column;
             align-items: center;
             gap: 2px;
+            padding: 4px 16px;
         }
 
         .nav-item.active {
@@ -301,7 +302,7 @@
     <header>
         <div class="user-info">
             <div class="status-dot"></div>
-            <span id="username-display">whyheavens</span>
+            <span id="username-display">Загрузка...</span>
         </div>
         <div style="display: flex; align-items: center;">
             <div class="balance-pill">
@@ -312,26 +313,52 @@
     </header>
 
     <div class="container">
-        <!-- Блок статистики / баланса в стиле скрина -->
-        <div class="top-card">
-            <div class="top-card-title">DRZ Gifts Hub</div>
-            <div class="toggle-group">
-                <div class="toggle-btn active">NFT Gifts</div>
-                <div class="toggle-btn" style="opacity: 0.5;">Stickers</div>
+        
+        <!-- ВКЛАДКА 1: КАТАЛОГ ПОДАРКОВ -->
+        <div id="tab-shop" class="view-section active">
+            <div class="top-card">
+                <div class="top-card-title">DRZ Gifts Hub</div>
+                <div class="toggle-group">
+                    <div class="toggle-btn active">NFT Gifts</div>
+                    <div class="toggle-btn" style="opacity: 0.5;">Stickers</div>
+                </div>
+                <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 4px;">Статус системы</div>
+                <div id="auth-status" style="font-size: 14px; font-weight: 600; color: var(--danger);">● Проверка ТГ...</div>
             </div>
-            <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 4px;">Статус системы</div>
-            <div style="font-size: 14px; font-weight: 600; color: #34c759;">● Активна (Защита whyheavens)</div>
+
+            <div class="section-title">Доступные подарки</div>
+            <div class="gifts-grid" id="gifts-container">
+                <div class="empty-text">Подарков пока нет.<br>Дождитесь добавления от администратора.</div>
+            </div>
         </div>
 
-        <div class="section-title">Доступные подарки</div>
-        
-        <!-- Сетка подарков (изначально пустая) -->
-        <div class="gifts-grid" id="gifts-container">
-            <div class="empty-text">Подарков пока нет.<br>Дождитесь добавления от администратора.</div>
+        <!-- ВКЛАДКА 2: ПРОФИЛЬ -->
+        <div id="tab-profile" class="view-section">
+            <div class="top-card" style="text-align: center; padding: 30px 20px;">
+                <div style="font-size: 40px; margin-bottom: 10px;">👤</div>
+                <div id="profile-name" style="font-size: 18px; font-weight: 700; margin-bottom: 4px;">Имя пользователя</div>
+                <div id="profile-username" style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">@username</div>
+                <div class="balance-pill" style="justify-content: center; font-size: 16px;">
+                    Баланс: <span id="profile-balance">9093234</span> ⭐
+                </div>
+            </div>
+            <div class="section-title">Мои полученные подарки</div>
+            <div class="gifts-grid" id="my-gifts-container">
+                <div class="empty-text">У вас пока нет подарков.</div>
+            </div>
         </div>
+
+        <!-- ВКЛАДКА 3: ИСТОРИЯ -->
+        <div id="tab-history" class="view-section">
+            <div class="top-card-title" style="margin-bottom: 14px;">История операций</div>
+            <div id="history-container">
+                <div class="empty-text">История пуста.</div>
+            </div>
+        </div>
+
     </div>
 
-    <!-- Модальное окно админки (Только для whyheavens) -->
+    <!-- Модальное окно админки (Строго для whyheavens) -->
     <div id="admin-modal" class="modal">
         <div class="modal-content">
             <div class="modal-title">Добавить подарок</div>
@@ -350,15 +377,15 @@
         </div>
     </div>
 
-    <!-- Нижняя панель навигации -->
+    <!-- Нижняя панель навигации (Рабочие кнопки) -->
     <nav class="bottom-nav">
-        <button class="nav-item active">
+        <button class="nav-item active" onclick="switchTab('shop', this)">
             <span>🎁</span>
         </button>
-        <button class="nav-item" onclick="alert('Раздел профиля')">
+        <button class="nav-item" onclick="switchTab('profile', this)">
             <span>📦</span>
         </button>
-        <button class="nav-item" onclick="alert('История транзакций')">
+        <button class="nav-item" onclick="switchTab('history', this)">
             <span>📊</span>
         </button>
     </nav>
@@ -367,19 +394,39 @@
         const tg = window.Telegram.WebApp;
         tg.expand();
 
-        // Проверяем пользователя
-        const user = tg.initDataUnsafe?.user;
-        const username = user ? user.username : 'whyheavens'; // Если открыто вне тг для теста — ставим whyheavens
+        // Получаем данные реального юзера из Telegram
+        const tgUser = tg.initDataUnsafe?.user;
+        
+        let username = "guest";
+        let firstName = "Гость";
 
-        document.getElementById('username-display').innerText = username || 'guest';
-
-        // Кнопка настройки видна ТОЛЬКО для пользователя whyheavens
-        if (username === 'whyheavens') {
-            document.getElementById('admin-gear').style.display = 'block';
+        if (tgUser && tgUser.username) {
+            username = tgUser.username;
+            firstName = tgUser.first_name || "Пользователь";
+        } else if (tgUser && tgUser.first_name) {
+            username = tgUser.first_name;
+            firstName = tgUser.first_name;
         }
 
-        // Хранилище подарков (пустое изначально)
+        // Вывод инфы в шапку и профиль
+        document.getElementById('username-display').innerText = username;
+        document.getElementById('profile-name').innerText = firstName;
+        document.getElementById('profile-username').innerText = "@" + username;
+
+        // ПРОВЕРКА АДМИНА: Доступ только если реальный юзернейм в ТГ = whyheavens
+        const authStatus = document.getElementById('auth-status');
+        if (username.toLowerCase() === 'whyheavens') {
+            document.getElementById('admin-gear').style.display = 'block';
+            authStatus.innerText = "● Активна (Админ-доступ)";
+            authStatus.style.color = "#34c759";
+        } else {
+            authStatus.innerText = "● Активна (Пользователь)";
+            authStatus.style.color = "#34c759";
+        }
+
+        // Данные приложения
         let gifts = JSON.parse(localStorage.getItem('drz_custom_gifts')) || [];
+        let historyLog = JSON.parse(localStorage.getItem('drz_history')) || [];
 
         function renderGifts() {
             const container = document.getElementById('gifts-container');
@@ -391,13 +438,40 @@
             container.innerHTML = '';
             gifts.forEach((gift, index) => {
                 container.innerHTML += `
-                    <div class="gift-card" onclick="alert('Подарок: ${gift.name}')">
+                    <div class="gift-card" onclick="buyGift(${index})">
                         <img class="gift-img" src="${gift.img}" alt="">
                         <div class="gift-name">${gift.name}</div>
                         <div class="gift-price-badge">⭐ ${gift.price}</div>
                     </div>
                 `;
             });
+        }
+
+        function renderHistory() {
+            const container = document.getElementById('history-container');
+            if (historyLog.length === 0) {
+                container.innerHTML = `<div class="empty-text">История пуста.</div>`;
+                return;
+            }
+            container.innerHTML = '';
+            historyLog.forEach(item => {
+                container.innerHTML += `
+                    <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 12px; margin-bottom: 8px; font-size: 13px;">
+                        <div>${item.text}</div>
+                        <div style="color: var(--text-muted); font-size: 11px; margin-top: 4px;">${item.date}</div>
+                    </div>
+                `;
+            });
+        }
+
+        function switchTab(tabName, btnElement) {
+            // Переключение секций
+            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+            document.getElementById('tab-' + tabName).classList.add('active');
+
+            // Подсветка кнопок снизу
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            if(btnElement) btnElement.classList.add('active');
         }
 
         function openAdminModal() {
@@ -409,6 +483,12 @@
         }
 
         function addNewGift() {
+            // Защита: если попытаются вызвать функцию обходным путем
+            if (username.toLowerCase() !== 'whyheavens') {
+                alert("Ошибка доступа! Вы не администратор.");
+                return;
+            }
+
             const name = document.getElementById('gift-name').value.trim();
             const img = document.getElementById('gift-img').value.trim();
             const price = parseInt(document.getElementById('gift-price').value);
@@ -421,10 +501,17 @@
             gifts.push({ name, img, price });
             localStorage.setItem('drz_custom_gifts', JSON.stringify(gifts));
 
+            // Добавляем запись в историю
+            historyLog.unshift({
+                text: `Добавлен новый подарок: ${name} (${price} ⭐)`,
+                date: new Date().toLocaleTimeString()
+            });
+            localStorage.setItem('drz_history', JSON.stringify(historyLog));
+
             renderGifts();
+            renderHistory();
             closeAdminModal();
 
-            // Очистка полей
             document.getElementById('gift-name').value = '';
             document.getElementById('gift-img').value = '';
             document.getElementById('gift-price').value = '';
@@ -434,8 +521,35 @@
             }
         }
 
-        // Первичный рендер
+        function buyGift(index) {
+            const gift = gifts[index];
+            if(confirm(`Хотите получить подарок "${gift.name}" за ${gift.price} ⭐?`)) {
+                // Добавляем в профиль (в реальном приложении тут списывались бы звезды)
+                let myGifts = JSON.parse(localStorage.getItem('drz_my_gifts')) || [];
+                myGifts.push(gift);
+                localStorage.setItem('drz_my_gifts', JSON.stringify(myGifts));
+
+                // Рендерим профиль
+                let profileContainer = document.getElementById('my-gifts-container');
+                profileContainer.innerHTML = '';
+                myGifts.forEach(g => {
+                    profileContainer.innerHTML += `
+                        <div class="gift-card">
+                            <img class="gift-img" src="${g.img}" alt="">
+                            <div class="gift-name">${g.name}</div>
+                            <div class="gift-price-badge" style="background: rgba(52, 199, 89, 0.1); color: #34c759;">Получено</div>
+                        </div>
+                    `;
+                });
+
+                alert("Подарок успешно добавлен в ваш профиль!");
+                switchTab('profile', document.querySelectorAll('.nav-item')[1]);
+            }
+        }
+
+        // Инициализация при старте
         renderGifts();
+        renderHistory();
     </script>
 </body>
 </html>
