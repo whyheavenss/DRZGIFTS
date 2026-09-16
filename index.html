@@ -203,6 +203,7 @@
             font-weight: 700;
             cursor: pointer;
             text-align: center;
+            margin-top: 8px;
         }
 
         .modal {
@@ -230,6 +231,8 @@
             border-top: 1px solid var(--border-color);
             transform: translateY(100%);
             transition: transform 0.3s cubic-bezier(0.1, 1, 0.1, 1);
+            max-height: 90vh;
+            overflow-y: auto;
         }
 
         .modal.open .modal-content {
@@ -306,7 +309,7 @@
         </div>
         <div style="display: flex; align-items: center;">
             <div class="balance-pill">
-                <span id="user-balance">9093234</span> ⭐
+                <span id="user-balance">0</span> ⭐
             </div>
             <button id="admin-gear" class="admin-gear" onclick="openAdminModal()">⚙️</button>
         </div>
@@ -339,7 +342,7 @@
                 <div id="profile-name" style="font-size: 18px; font-weight: 700; margin-bottom: 4px;">Имя пользователя</div>
                 <div id="profile-username" style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">@username</div>
                 <div class="balance-pill" style="justify-content: center; font-size: 16px;">
-                    Баланс: <span id="profile-balance">9093234</span> ⭐
+                    Баланс: <span id="profile-balance">0</span> ⭐
                 </div>
             </div>
             <div class="section-title">Мои полученные подарки</div>
@@ -358,26 +361,41 @@
 
     </div>
 
-    <!-- Модальное окно админки (Строго для whyheavens) -->
+    <!-- Модальное окно админки (Только для whyheavens) -->
     <div id="admin-modal" class="modal">
         <div class="modal-content">
-            <div class="modal-title">Добавить подарок</div>
+            <div class="modal-title">Панель администратора</div>
             
-            <label class="input-label">Название подарка</label>
-            <input type="text" id="gift-name" class="input-field" placeholder="Например: Golden Rolex">
+            <div style="margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 15px;">
+                <div style="font-weight: 600; font-size: 14px; margin-bottom: 10px; color: var(--accent-gold);">➕ Добавить подарок</div>
+                <label class="input-label">Название подарка</label>
+                <input type="text" id="gift-name" class="input-field" placeholder="Например: Golden Rolex">
 
-            <label class="input-label">Ссылка на картинку (PNG / URL)</label>
-            <input type="text" id="gift-img" class="input-field" placeholder="https://...">
+                <label class="input-label">Ссылка на картинку (PNG / URL)</label>
+                <input type="text" id="gift-img" class="input-field" placeholder="https://...">
 
-            <label class="input-label">Стоимость (в звездах ⭐)</label>
-            <input type="number" id="gift-price" class="input-field" placeholder="500">
+                <label class="input-label">Стоимость (в звездах ⭐)</label>
+                <input type="number" id="gift-price" class="input-field" placeholder="500">
 
-            <button class="main-btn" onclick="addNewGift()">Опубликовать подарок</button>
-            <button class="main-btn" style="background: var(--border-color); color: var(--text-main); margin-top: 8px;" onclick="closeAdminModal()">Отмена</button>
+                <button class="main-btn" onclick="addNewGift()">Опубликовать подарок</button>
+            </div>
+
+            <div>
+                <div style="font-weight: 600; font-size: 14px; margin-bottom: 10px; color: var(--accent-gold);">⭐ Выдать звезды пользователю</div>
+                <label class="input-label">Юзернейм пользователя (без @)</label>
+                <input type="text" id="target-username" class="input-field" placeholder="username">
+
+                <label class="input-label">Количество звезд</label>
+                <input type="number" id="target-stars" class="input-field" placeholder="1000">
+
+                <button class="main-btn" onclick="grantStars()">Начислить звезды</button>
+            </div>
+
+            <button class="main-btn" style="background: var(--border-color); color: var(--text-main); margin-top: 15px;" onclick="closeAdminModal()">Закрыть</button>
         </div>
     </div>
 
-    <!-- Нижняя панель навигации (Рабочие кнопки) -->
+    <!-- Нижняя панель навигации -->
     <nav class="bottom-nav">
         <button class="nav-item active" onclick="switchTab('shop', this)">
             <span>🎁</span>
@@ -394,7 +412,6 @@
         const tg = window.Telegram.WebApp;
         tg.expand();
 
-        // Получаем данные реального юзера из Telegram
         const tgUser = tg.initDataUnsafe?.user;
         
         let username = "guest";
@@ -408,12 +425,23 @@
             firstName = tgUser.first_name;
         }
 
-        // Вывод инфы в шапку и профиль
+        // Загружаем или инициализируем балансы пользователей
+        let balances = JSON.parse(localStorage.getItem('drz_balances')) || {};
+        if (balances[username] === undefined) {
+            balances[username] = 0; // У всех дефолтный баланс 0
+            localStorage.setItem('drz_balances', JSON.stringify(balances));
+        }
+
+        let userBalance = balances[username];
+
+        // Вывод данных в интерфейс
         document.getElementById('username-display').innerText = username;
         document.getElementById('profile-name').innerText = firstName;
         document.getElementById('profile-username').innerText = "@" + username;
+        document.getElementById('user-balance').innerText = userBalance;
+        document.getElementById('profile-balance').innerText = userBalance;
 
-        // ПРОВЕРКА АДМИНА: Доступ только если реальный юзернейм в ТГ = whyheavens
+        // ПРОВЕРКА АДМИНА
         const authStatus = document.getElementById('auth-status');
         if (username.toLowerCase() === 'whyheavens') {
             document.getElementById('admin-gear').style.display = 'block';
@@ -424,7 +452,6 @@
             authStatus.style.color = "#34c759";
         }
 
-        // Данные приложения
         let gifts = JSON.parse(localStorage.getItem('drz_custom_gifts')) || [];
         let historyLog = JSON.parse(localStorage.getItem('drz_history')) || [];
 
@@ -442,6 +469,27 @@
                         <img class="gift-img" src="${gift.img}" alt="">
                         <div class="gift-name">${gift.name}</div>
                         <div class="gift-price-badge">⭐ ${gift.price}</div>
+                    </div>
+                `;
+            });
+        }
+
+        function renderProfileGifts() {
+            let myGifts = JSON.parse(localStorage.getItem('drz_my_gifts_' + username)) || [];
+            let profileContainer = document.getElementById('my-gifts-container');
+            
+            if (myGifts.length === 0) {
+                profileContainer.innerHTML = `<div class="empty-text">У вас пока нет подарков.</div>`;
+                return;
+            }
+
+            profileContainer.innerHTML = '';
+            myGifts.forEach(g => {
+                profileContainer.innerHTML += `
+                    <div class="gift-card">
+                        <img class="gift-img" src="${g.img}" alt="">
+                        <div class="gift-name">${g.name}</div>
+                        <div class="gift-price-badge" style="background: rgba(52, 199, 89, 0.1); color: #34c759;">⭐ ${g.price}</div>
                     </div>
                 `;
             });
@@ -465,13 +513,15 @@
         }
 
         function switchTab(tabName, btnElement) {
-            // Переключение секций
             document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
             document.getElementById('tab-' + tabName).classList.add('active');
 
-            // Подсветка кнопок снизу
             document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
             if(btnElement) btnElement.classList.add('active');
+
+            if(tabName === 'profile') {
+                renderProfileGifts();
+            }
         }
 
         function openAdminModal() {
@@ -483,27 +533,22 @@
         }
 
         function addNewGift() {
-            // Защита: если попытаются вызвать функцию обходным путем
-            if (username.toLowerCase() !== 'whyheavens') {
-                alert("Ошибка доступа! Вы не администратор.");
-                return;
-            }
+            if (username.toLowerCase() !== 'whyheavens') return;
 
             const name = document.getElementById('gift-name').value.trim();
             const img = document.getElementById('gift-img').value.trim();
             const price = parseInt(document.getElementById('gift-price').value);
 
             if (!name || !img || isNaN(price)) {
-                alert("Заполните корректно все поля!");
+                alert("Заполните корректно все поля подарка!");
                 return;
             }
 
             gifts.push({ name, img, price });
             localStorage.setItem('drz_custom_gifts', JSON.stringify(gifts));
 
-            // Добавляем запись в историю
             historyLog.unshift({
-                text: `Добавлен новый подарок: ${name} (${price} ⭐)`,
+                text: `Админ добавил подарок: ${name} (${price} ⭐)`,
                 date: new Date().toLocaleTimeString()
             });
             localStorage.setItem('drz_history', JSON.stringify(historyLog));
@@ -516,38 +561,75 @@
             document.getElementById('gift-img').value = '';
             document.getElementById('gift-price').value = '';
 
-            if(tg.HapticFeedback) {
-                tg.HapticFeedback.notificationOccurred('success');
+            if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+        }
+
+        function grantStars() {
+            if (username.toLowerCase() !== 'whyheavens') return;
+
+            const targetUser = document.getElementById('target-username').value.trim().replace('@', '');
+            const amount = parseInt(document.getElementById('target-stars').value);
+
+            if (!targetUser || isNaN(amount)) {
+                alert("Укажите юзернейм и количество звезд!");
+                return;
             }
+
+            let allBalances = JSON.parse(localStorage.getItem('drz_balances')) || {};
+            allBalances[targetUser] = (allBalances[targetUser] || 0) + amount;
+            localStorage.setItem('drz_balances', JSON.stringify(allBalances));
+
+            // Если выдали себе, обновляем на экране
+            if (targetUser.toLowerCase() === username.toLowerCase()) {
+                userBalance = allBalances[username];
+                document.getElementById('user-balance').innerText = userBalance;
+                document.getElementById('profile-balance').innerText = userBalance;
+            }
+
+            historyLog.unshift({
+                text: `Админ выдал +${amount} ⭐ пользователю @${targetUser}`,
+                date: new Date().toLocaleTimeString()
+            });
+            localStorage.setItem('drz_history', JSON.stringify(historyLog));
+            renderHistory();
+
+            closeAdminModal();
+            alert(`Успешно начислено ${amount} ⭐ пользователю @${targetUser}!`);
+            document.getElementById('target-username').value = '';
+            document.getElementById('target-stars').value = '';
         }
 
         function buyGift(index) {
             const gift = gifts[index];
-            if(confirm(`Хотите получить подарок "${gift.name}" за ${gift.price} ⭐?`)) {
-                // Добавляем в профиль (в реальном приложении тут списывались бы звезды)
-                let myGifts = JSON.parse(localStorage.getItem('drz_my_gifts')) || [];
+            if(userBalance < gift.price) {
+                alert("Недостаточно звезд на балансе! Обратитесь к администратору для пополнения.");
+                return;
+            }
+
+            if(confirm(`Купить подарок "${gift.name}" за ${gift.price} ⭐?`)) {
+                userBalance -= gift.price;
+                balances[username] = userBalance;
+                localStorage.setItem('drz_balances', JSON.stringify(balances));
+
+                document.getElementById('user-balance').innerText = userBalance;
+                document.getElementById('profile-balance').innerText = userBalance;
+
+                let myGifts = JSON.parse(localStorage.getItem('drz_my_gifts_' + username)) || [];
                 myGifts.push(gift);
-                localStorage.setItem('drz_my_gifts', JSON.stringify(myGifts));
+                localStorage.setItem('drz_my_gifts_' + username, JSON.stringify(myGifts));
 
-                // Рендерим профиль
-                let profileContainer = document.getElementById('my-gifts-container');
-                profileContainer.innerHTML = '';
-                myGifts.forEach(g => {
-                    profileContainer.innerHTML += `
-                        <div class="gift-card">
-                            <img class="gift-img" src="${g.img}" alt="">
-                            <div class="gift-name">${g.name}</div>
-                            <div class="gift-price-badge" style="background: rgba(52, 199, 89, 0.1); color: #34c759;">Получено</div>
-                        </div>
-                    `;
+                historyLog.unshift({
+                    text: `@${username} купил подарок ${gift.name} за ${gift.price} ⭐`,
+                    date: new Date().toLocaleTimeString()
                 });
+                localStorage.setItem('drz_history', JSON.stringify(historyLog));
+                renderHistory();
 
-                alert("Подарок успешно добавлен в ваш профиль!");
+                alert("Подарок успешно куплен и добавлен в ваш профиль!");
                 switchTab('profile', document.querySelectorAll('.nav-item')[1]);
             }
         }
 
-        // Инициализация при старте
         renderGifts();
         renderHistory();
     </script>
