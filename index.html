@@ -79,7 +79,7 @@
             color: var(--text-muted);
             font-size: 18px;
             cursor: pointer;
-            display: none; /* Покажется только если username === whyheavens */
+            display: none; /* Покажется только у whyheavens */
             margin-left: 10px;
         }
 
@@ -206,46 +206,6 @@
             margin-top: 8px;
         }
 
-        .modal {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.85);
-            display: flex;
-            align-items: flex-end;
-            z-index: 1000;
-            opacity: 0;
-            pointer-events: none;
-            transition: 0.3s;
-        }
-
-        .modal.open {
-            opacity: 1;
-            pointer-events: auto;
-        }
-
-        .modal-content {
-            background: var(--bg-card);
-            width: 100%;
-            border-radius: 24px 24px 0 0;
-            padding: 24px;
-            border-top: 1px solid var(--border-color);
-            transform: translateY(100%);
-            transition: transform 0.3s cubic-bezier(0.1, 1, 0.1, 1);
-            max-height: 90vh;
-            overflow-y: auto;
-        }
-
-        .modal.open .modal-content {
-            transform: translateY(0);
-        }
-
-        .modal-title {
-            font-size: 18px;
-            font-weight: 700;
-            margin-bottom: 16px;
-            text-align: center;
-        }
-
         .input-field {
             width: 100%;
             padding: 12px 16px;
@@ -292,7 +252,7 @@
             flex-direction: column;
             align-items: center;
             gap: 2px;
-            padding: 4px 16px;
+            padding: 4px 12px;
         }
 
         .nav-item.active {
@@ -311,7 +271,7 @@
             <div class="balance-pill">
                 <span id="user-balance">0</span> ⭐
             </div>
-            <button id="admin-gear" class="admin-gear" onclick="openAdminModal()">⚙️</button>
+            <button id="admin-gear" class="admin-gear" onclick="switchTab('admin', null)">⚙️</button>
         </div>
     </header>
 
@@ -359,15 +319,12 @@
             </div>
         </div>
 
-    </div>
-
-    <!-- Модальное окно админки (Только для whyheavens) -->
-    <div id="admin-modal" class="modal">
-        <div class="modal-content">
-            <div class="modal-title">Панель администратора</div>
+        <!-- ВКЛАДКА 4: АДМИН-ПАНЕЛЬ (Только для whyheavens) -->
+        <div id="tab-admin" class="view-section">
+            <div class="top-card-title" style="margin-bottom: 16px; color: var(--accent-gold);">⚙️ Панель администратора</div>
             
-            <div style="margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 15px;">
-                <div style="font-weight: 600; font-size: 14px; margin-bottom: 10px; color: var(--accent-gold);">➕ Добавить подарок</div>
+            <div class="top-card" style="margin-bottom: 16px;">
+                <div style="font-weight: 600; font-size: 15px; margin-bottom: 12px;">➕ Добавить подарок</div>
                 <label class="input-label">Название подарка</label>
                 <input type="text" id="gift-name" class="input-field" placeholder="Например: Golden Rolex">
 
@@ -380,8 +337,8 @@
                 <button class="main-btn" onclick="addNewGift()">Опубликовать подарок</button>
             </div>
 
-            <div>
-                <div style="font-weight: 600; font-size: 14px; margin-bottom: 10px; color: var(--accent-gold);">⭐ Выдать звезды пользователю</div>
+            <div class="top-card">
+                <div style="font-weight: 600; font-size: 15px; margin-bottom: 12px;">⭐ Выдать звезды пользователю</div>
                 <label class="input-label">Юзернейм пользователя (без @)</label>
                 <input type="text" id="target-username" class="input-field" placeholder="username">
 
@@ -390,9 +347,8 @@
 
                 <button class="main-btn" onclick="grantStars()">Начислить звезды</button>
             </div>
-
-            <button class="main-btn" style="background: var(--border-color); color: var(--text-main); margin-top: 15px;" onclick="closeAdminModal()">Закрыть</button>
         </div>
+
     </div>
 
     <!-- Нижняя панель навигации -->
@@ -405,6 +361,9 @@
         </button>
         <button class="nav-item" onclick="switchTab('history', this)">
             <span>📊</span>
+        </button>
+        <button id="admin-nav-btn" class="nav-item" style="display: none;" onclick="switchTab('admin', this)">
+            <span>⚙️</span>
         </button>
     </nav>
 
@@ -425,16 +384,14 @@
             firstName = tgUser.first_name;
         }
 
-        // Загружаем или инициализируем балансы пользователей
         let balances = JSON.parse(localStorage.getItem('drz_balances')) || {};
         if (balances[username] === undefined) {
-            balances[username] = 0; // У всех дефолтный баланс 0
+            balances[username] = 0;
             localStorage.setItem('drz_balances', JSON.stringify(balances));
         }
 
         let userBalance = balances[username];
 
-        // Вывод данных в интерфейс
         document.getElementById('username-display').innerText = username;
         document.getElementById('profile-name').innerText = firstName;
         document.getElementById('profile-username').innerText = "@" + username;
@@ -445,6 +402,7 @@
         const authStatus = document.getElementById('auth-status');
         if (username.toLowerCase() === 'whyheavens') {
             document.getElementById('admin-gear').style.display = 'block';
+            document.getElementById('admin-nav-btn').style.display = 'flex';
             authStatus.innerText = "● Активна (Админ-доступ)";
             authStatus.style.color = "#34c759";
         } else {
@@ -516,20 +474,14 @@
             document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
             document.getElementById('tab-' + tabName).classList.add('active');
 
-            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-            if(btnElement) btnElement.classList.add('active');
+            if (btnElement) {
+                document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+                btnElement.classList.add('active');
+            }
 
             if(tabName === 'profile') {
                 renderProfileGifts();
             }
-        }
-
-        function openAdminModal() {
-            document.getElementById('admin-modal').classList.add('open');
-        }
-
-        function closeAdminModal() {
-            document.getElementById('admin-modal').classList.remove('open');
         }
 
         function addNewGift() {
@@ -555,11 +507,13 @@
 
             renderGifts();
             renderHistory();
-            closeAdminModal();
 
             document.getElementById('gift-name').value = '';
             document.getElementById('gift-img').value = '';
             document.getElementById('gift-price').value = '';
+
+            alert("Подарок успешно добавлен!");
+            switchTab('shop', document.querySelectorAll('.nav-item')[0]);
 
             if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
         }
@@ -579,7 +533,6 @@
             allBalances[targetUser] = (allBalances[targetUser] || 0) + amount;
             localStorage.setItem('drz_balances', JSON.stringify(allBalances));
 
-            // Если выдали себе, обновляем на экране
             if (targetUser.toLowerCase() === username.toLowerCase()) {
                 userBalance = allBalances[username];
                 document.getElementById('user-balance').innerText = userBalance;
@@ -593,16 +546,16 @@
             localStorage.setItem('drz_history', JSON.stringify(historyLog));
             renderHistory();
 
-            closeAdminModal();
             alert(`Успешно начислено ${amount} ⭐ пользователю @${targetUser}!`);
             document.getElementById('target-username').value = '';
             document.getElementById('target-stars').value = '';
+            switchTab('shop', document.querySelectorAll('.nav-item')[0]);
         }
 
         function buyGift(index) {
             const gift = gifts[index];
             if(userBalance < gift.price) {
-                alert("Недостаточно звезд на балансе! Обратитесь к администратору для пополнения.");
+                alert("Недостаточно звезд на балансе!");
                 return;
             }
 
@@ -625,7 +578,7 @@
                 localStorage.setItem('drz_history', JSON.stringify(historyLog));
                 renderHistory();
 
-                alert("Подарок успешно куплен и добавлен в ваш профиль!");
+                alert("Подарок успешно куплен!");
                 switchTab('profile', document.querySelectorAll('.nav-item')[1]);
             }
         }
